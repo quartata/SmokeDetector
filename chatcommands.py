@@ -1143,6 +1143,18 @@ def command_report_post(ev_room, ev_user_id, wrap2, message_parts, message_url,
         batch = ""
         if len(urls) > 1:
             batch = " (batch report: post {} out of {})".format(index, len(urls))
+
+        _, reasons, computed_why = check_if_spam(title=post_data.title,
+                                                 body=post_data.body,
+                                                 user_name=post_data.owner_name,
+                                                 user_url=post_data.owner_url,
+                                                 post_site=post_data.site,
+                                                 post_id=post_data.post_id,
+                                                 is_answer=post_data.post_type == "answer",
+                                                 body_is_summary=False,
+                                                 owner_rep=post_data.owner_rep,
+                                                 post_score=post_data.score)
+
         handle_spam(title=post_data.title,
                     body=post_data.body,
                     poster=post_data.owner_name,
@@ -1150,9 +1162,9 @@ def command_report_post(ev_room, ev_user_id, wrap2, message_parts, message_url,
                     post_url=post_data.post_url,
                     poster_url=post_data.owner_url,
                     post_id=post_data.post_id,
-                    reasons=["Manually reported " + post_data.post_type + batch],
+                    reasons=["Manually reported " + post_data.post_type + batch] + reasons,
                     is_answer=post_data.post_type == "answer",
-                    why=why,
+                    why=why + computed_why,
                     owner_rep=post_data.owner_rep,
                     post_score=post_data.score,
                     up_vote_count=post_data.up_vote_count,
