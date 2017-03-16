@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime
-from ChatExchange.chatexchange.client import Client
+from chatexchange_extension import Client
 import HTMLParser
 from hashlib import md5
 import ConfigParser
@@ -87,7 +87,7 @@ class GlobalVars:
             "137665",   # ByteCommander
             "147884",   # wythagoras
             "186395",   # Åna
-            "193364",   # Ashish Ahuja
+            "181293",   # Ashish Ahuja
             "163686",   # Gothdo
             "145827",   # angussidney
             "244748",   # Supreme Leader SnokeDetector (angussidney's sock)
@@ -115,7 +115,12 @@ class GlobalVars:
             "133031",   # Mithrandir
             "169713",   # Mego
             "126657",   # Cerbrus
-            "10145"     # Thomas Ward
+            "10145",    # Thomas Ward
+            "161943",   # J F
+            "195967",   # CaffeineAddiction
+            "5363",     # Stijn
+            "248139",   # FelixSFD
+            "156721"    # D-side
         ],
         meta_tavern_room_id: [
             "315433",   # Normal Human
@@ -241,7 +246,7 @@ class GlobalVars:
             "792066",   # Braiam
             "5666987",  # Ian
             "3160466",  # ArtOfCode
-            "5735775",  # Ashish Ahuja
+            "4688119",  # Ashish Ahuja
             "3476191",  # Nobody Nada
             "2227743",  # Eric D
             "821878",   # Ryan Bemrose
@@ -253,7 +258,11 @@ class GlobalVars:
             "559745",   # Floern
             "5743988",  # 4castle
             "4622463",  # angussidney
-            "603346"    # Thomas Ward
+            "603346",   # Thomas Ward
+            "3002139",  # Baum mit Augen
+            "1863564",  # QPaysTaxes
+            "4687348",  # FelixSFD
+            "4751173"  # Glorfindel
         ]
     }
 
@@ -271,7 +280,7 @@ class GlobalVars:
         commit_author = censored_committer_names[md5(commit_author).hexdigest()]
 
     commit_with_author = os.popen('git log --pretty=format:"%h (' + commit_author + ': *%s*)" -n 1').read()
-    on_master = os.popen("git rev-parse --abbrev-ref HEAD").read().strip() == "deploy"
+    on_master = "HEAD detached" not in os.popen("git status").read()
     charcoal_hq = None
     tavern_on_the_meta = None
     socvr = None
@@ -316,13 +325,11 @@ class GlobalVars:
     post_site_id_to_question = {}
 
     location = config.get("Config", "location")
-    print location
 
     metasmoke_ws = None
 
     try:
         metasmoke_host = config.get("Config", "metasmoke_host")
-        print metasmoke_host
     except ConfigParser.NoOptionError:
         metasmoke_host = None
         print "metasmoke host not found. Set it as metasmoke_host in the config file." \

@@ -21,6 +21,34 @@ class PostData:
         self.down_vote_count = None
         self.question_id = None
 
+    @property
+    def as_dict(self):
+        # Basically, return this to the dict-style response that Post(api_data=DATA) expects, for proper parsing.
+        dictdata = {
+            'title': self.title,
+            'body': self.body,
+            'owner': {'display_name': self.owner_name, 'link': self.owner_url, 'reputation': self.owner_rep},
+            'site': self.site,
+            'question_id': self.post_id,
+            'link': self.post_url,
+            'score': self.score,
+            'up_vote_count': self.up_vote_count,
+            'down_vote_count': self.down_vote_count,
+        }
+        # noinspection PyBroadException
+        try:
+            dictdata['IsAnswer'] = getattr(self, 'IsAnswer')
+        except:
+            dictdata['IsAnswer'] = False  # Assume it's not an answer
+
+        return dictdata
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __getitem__(self, item):
+        getattr(self, item)
+
 
 def api_get_post(post_url):
     GlobalVars.api_request_lock.acquire()
@@ -30,6 +58,7 @@ def api_get_post(post_url):
         time.sleep(GlobalVars.api_backoff_time - time.time() + 2)
     d = parsing.fetch_post_id_and_site_from_url(post_url)
     if d is None:
+        GlobalVars.api_request_lock.release()
         return None
     post_id, site, post_type = d
     if post_type == "answer":
@@ -46,6 +75,7 @@ def api_get_post(post_url):
         if GlobalVars.api_backoff_time < time.time() + response["backoff"]:
             GlobalVars.api_backoff_time = time.time() + response["backoff"]
     if 'items' not in response or len(response['items']) == 0:
+        GlobalVars.api_request_lock.release()
         return False
     GlobalVars.api_request_lock.release()
 

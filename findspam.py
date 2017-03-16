@@ -1,10 +1,35 @@
 # -*- coding: utf-8 -*-
 import regex
 import phonenumbers
+from difflib import SequenceMatcher
+import tld
+from tld.utils import TldDomainNotFound
+from urlparse import urlparse
+from helpers import all_matches_unique
+
+SIMILAR_THRESHOLD = 0.95
+EXCEPTION_RE = r"^Domain (.*) didn't .*!$"
+RE_COMPILE = regex.compile(EXCEPTION_RE)
+COMMON_MALFORMED_PROTOCOLS = [
+    ('httl://', 'http://'),
+]
+
+# Flee before the ugly URL validator regex!
+# We are using this, instead of a nice library like BeautifulSoup, because spammers are
+# stupid and don't always know how to actually *link* their web site. BeautifulSoup misses
+# those plain text URLs.
+# https://gist.github.com/dperini/729294#gistcomment-1296121
+URL_REGEX = regex.compile(
+    r"""((?:(?:https?|ftp)://)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)"""
+    r"""(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2}))"""
+    r"""(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])"""
+    r"""(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))"""
+    r"""|(?:(?:[a-z\u00a1-\uffff0-9]-?)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-?)"""
+    r"""*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:/\S*)?""", regex.UNICODE)
 
 
-# noinspection PyUnusedLocal
-def has_repeated_words(s, site):
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_repeated_words(s, site, *args):
     words = regex.split(r"[\s.,;!/\()\[\]+_-]", s)
     words = [word for word in words if word != ""]
     streak = 0
@@ -20,20 +45,20 @@ def has_repeated_words(s, site):
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def has_few_characters(s, site):
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_few_characters(s, site, *args):
     s = regex.sub("</?p>", "", s).rstrip()    # remove HTML paragraph tags from posts
     uniques = len(set(list(s)))
     if (len(s) >= 30 and uniques <= 6) or (len(s) >= 100 and uniques <= 15):    # reduce if false reports appear
-        if (uniques <= 15) and (uniques >= 5) and site == "math.stackoverflow.com":
+        if (uniques <= 15) and (uniques >= 5) and site == "math.stackexchange.com":
             # Special case for Math.SE: Uniques case may trigger false-positives.
             return False, ""
         return True, u"Contains {} unique characters".format(uniques)
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def has_repeating_characters(s, site):
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_repeating_characters(s, site, *args):
     s = regex.sub('http[^"]*', "", s)    # remove URLs for this check
     if s is None or len(s) == 0 or len(s) >= 300 or regex.compile("<pre>|<code>").search(s):
         return False, ""
@@ -44,8 +69,8 @@ def has_repeating_characters(s, site):
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def link_at_end(s, site):   # link at end of question, on selected sites
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def link_at_end(s, site, *args):   # link at end of question, on selected sites
     s = regex.sub("</strong>|</em>|</p>", "", s)
     match = regex.compile(ur"(?i)https?://(?:[.A-Za-z0-9-]*/?[.A-Za-z0-9-]*/?|plus\.google\.com/"
                           ur"[\w/]*|www\.pinterest\.com/pin/[\d/]*)</a>\s*$").search(s)
@@ -56,8 +81,8 @@ def link_at_end(s, site):   # link at end of question, on selected sites
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def non_english_link(s, site):   # non-english link in short answer
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def non_english_link(s, site, *args):   # non-english link in short answer
     if len(s) < 600:
         links = regex.compile(ur'nofollow(?: noreferrer)?">([^<]*)(?=</a>)', regex.UNICODE).findall(s)
         for link_text in links:
@@ -69,9 +94,8 @@ def non_english_link(s, site):   # non-english link in short answer
     return False, ""
 
 
-def mostly_non_latin(s, site):   # majority of post is in non-Latin, non-Cyrillic characters
-    if regex.compile("<pre>|<code>").search(s) and site == "stackoverflow.com":  # Avoid false positives on SO
-        return False, ""
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def mostly_non_latin(s, site, *args):   # majority of post is in non-Latin, non-Cyrillic characters
     word_chars = regex.sub(r'(?u)[\W0-9]|http\S*', "", s)
     non_latin_chars = regex.sub(r"(?u)\p{script=Latin}|\p{script=Cyrillic}", "", word_chars)
     if len(non_latin_chars) > 0.4 * len(word_chars):
@@ -79,8 +103,8 @@ def mostly_non_latin(s, site):   # majority of post is in non-Latin, non-Cyrilli
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def has_phone_number(s, site):
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_phone_number(s, site, *args):
     if regex.compile(ur"(?i)\b(address(es)?|run[- ]?time|error|value|server|hostname|timestamp|warning|code|"
                      ur"(sp)?exception|version|chrome|1234567)\b", regex.UNICODE).search(s):
         return False, ""  # not a phone number
@@ -106,7 +130,8 @@ def has_phone_number(s, site):
     return False, ""
 
 
-def has_customer_service(s, site):  # flexible detection of customer service in titles
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_customer_service(s, site, *args):  # flexible detection of customer service in titles
     s = s[0:300].lower()   # if applied to body, the beginning should be enough: otherwise many false positives
     s = regex.sub(r"[^A-Za-z0-9\s]", "", s)   # deobfuscate
     phrase = regex.compile(r"(tech(nical)? support)|((support|service|contact|help(line)?) (telephone|phone|"
@@ -125,8 +150,8 @@ def has_customer_service(s, site):  # flexible detection of customer service in 
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def has_health(s, site):   # flexible detection of health spam in titles
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_health(s, site, *args):   # flexible detection of health spam in titles
     s = s[0:200]   # if applied to body, the beginning should be enough: otherwise many false positives
     capitalized = len(regex.compile(r"\b[A-Z][a-z]").findall(s)) >= 5   # words beginning with uppercase letter
     organ = regex.compile(r"(?i)\b(colon|skin|muscle|bicep|fac(e|ial)|eye|brain|IQ|mind|head|hair|peni(s|le)|"
@@ -157,7 +182,28 @@ def has_health(s, site):   # flexible detection of health spam in titles
     return False, ""
 
 
-def keyword_email(s, site):   # a keyword and an email in the same post
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def pattern_product_name(s, site, *args):
+    keywords = ["Testo?", "Dermapholia", "Garcinia", "Cambogia", "Aurora", "Kamasutra", "HL-?12", "NeuroFuse",
+                "Junivive", "Apexatropin", "Gain", "Allure", "Nuvella", "Trimgenix", "Satin", "Prodroxatone",
+                "Elite", "Force", "Exceptional", "Enhance(ment)?", "Nitro", "Max", "Boost", "E?xtreme", "Grow",
+                "Deep", "Male", "Pro", "Advanced", "Monster", "Divine", "Royale",
+                "Pure", "Skin", "Sea", "Muscle", "Ascend", "Youth",
+                "Serum", "Supplement", "Fuel", "Cream"]
+    if site != "math.stackexchange.com" and site != "mathoverflow.net":
+        keywords += ["E?X[tl]?", "Alpha", "Prime", "Formula"]
+    keywords = "|".join(keywords)
+    three_words = regex.compile(ur"(?i)\b(({0})[ -]({0})[ -]({0}))\b".format(keywords)).findall(s)
+    two_words = regex.compile(ur"(?i)\b(({0})[ -]({0}))\b".format(keywords)).findall(s)
+    if len(three_words) >= 1 and all_matches_unique(three_words):
+        return True, u"Pattern-matching product name *{}*".format(three_words[0][0])
+    elif len(two_words) >= 2 and all_matches_unique(two_words):
+        return True, u"Pattern-matching product name *{}*".format(two_words[0][0])
+    return False, ""
+
+
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def keyword_email(s, site, *args):   # a keyword and an email in the same post
     if regex.compile("<pre>|<code>").search(s) and site == "stackoverflow.com":  # Avoid false positives on SO
         return False, ""
     keyword = regex.compile(ur"(?i)\b(training|we (will )?(offer|develop|provide)|sell|invest(or|ing|ment)|credit|"
@@ -165,7 +211,7 @@ def keyword_email(s, site):   # a keyword and an email in the same post
                             ur"career|employment|candidate|loan|lover|husband|wife|marriage|illuminati|brotherhood|"
                             ur"(join|contact) (me|us|him)|reach (us|him)|spell(caster)?|doctor|cancer|krebs|"
                             ur"(cheat|hack)(er|ing)?|spying|passport|seaman|scam|pics|vampire|bless(ed)?|atm|miracle|"
-                            ur"testimony|kidney|hospital|wetting)s?\b| Dr\.? |\$ ?[0-9,.]{4}|@qq\.com|"
+                            ur"cure|testimony|kidney|hospital|wetting)s?\b| Dr\.? |\$ ?[0-9,.]{4}|@qq\.com|"
                             ur"\b(герпес|муж|жена|доктор|болезн)").search(s)
     email = regex.compile(ur"(?<![=#/])\b[A-z0-9_.%+-]+@(?!(example|domain|site|foo|\dx)\.[A-z]{2,4})"
                           ur"[A-z0-9_.%+-]+\.[A-z]{2,4}\b").search(s)
@@ -177,8 +223,8 @@ def keyword_email(s, site):   # a keyword and an email in the same post
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def keyword_link(s, site):   # thanking keyword and a link in the same short answer
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def keyword_link(s, site, *args):   # thanking keyword and a link in the same short answer
     if len(s) > 400:
         return False, ""
     link = regex.compile(ur'(?i)<a href="https?://\S+').search(s)
@@ -186,11 +232,12 @@ def keyword_link(s, site):   # thanking keyword and a link in the same short ans
                                  r"stackexchange|superuser|past[ie].*|dropbox|microsoft|newegg|cnet|(?<!plus\.)google|"
                                  r"localhost|ubuntu)\b").search(link.group(0)):
         return False, ""
-    praise = regex.compile(ur"(?i)\b(nice|good|interesting|helpful|great) (article|blog|post)\b").search(s)
+    praise = regex.compile(ur"(?i)\b(nice|good|interesting|helpful|great|amazing) (article|blog|post|information)\b|"
+                           ur"very useful").search(s)
     thanks = regex.compile(ur"(?i)\b(appreciate|than(k|ks|x))\b").search(s)
     keyword = regex.compile(ur"(?i)\b(I really appreciate|many thanks|thanks a lot|thank you (very|for)|"
-                            ur"than(ks|x) for (sharing|this|your)|dear forum members|(very informative|"
-                            ur"stumbled upon (your|this)) (blog|site|website))\b").search(s)
+                            ur"than(ks|x) for (sharing|this|your)|dear forum members|(very (informative|useful)|"
+                            ur"stumbled upon (your|this)|wonderful|visit my) (blog|site|website))\b").search(s)
     if link and keyword:
         return True, u"Keyword *{}* with link {}".format(keyword.group(0), link.group(0))
     if link and thanks and praise:
@@ -198,8 +245,8 @@ def keyword_link(s, site):   # thanking keyword and a link in the same short ans
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def bad_link_text(s, site):   # suspicious text of a hyperlink
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def bad_link_text(s, site, *args):   # suspicious text of a hyperlink
     s = regex.sub("</?strong>|</?em>", "", s)  # remove font tags
     keywords = regex.compile(ur"(?isu)^(buy|cheap) |live[ -]?stream|(^| )make (money|\$)|(^| )(porno?|(whole)?sale|"
                              ur"coins|replica|luxury|essays?|in \L<city>)($| )|(^| )\L<city>.*(service|escort|"
@@ -222,8 +269,8 @@ def bad_link_text(s, site):   # suspicious text of a hyperlink
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def is_offensive_post(s, site):
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def is_offensive_post(s, site, *args):
     if s is None or len(s) == 0:
         return False, ""
 
@@ -244,12 +291,95 @@ def is_offensive_post(s, site):
     return False, ""
 
 
-# noinspection PyUnusedLocal
-def has_eltima(s, site):
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def has_eltima(s, site, *args):
     reg = regex.compile(ur"(?is)\beltima")
     if reg.search(s) and len(s) <= 750:
         return True, u"Bad keyword *eltima* and body length under 750 chars"
     return False, ""
+
+
+# noinspection PyUnusedLocal,PyMissingTypeHints
+def username_similar_website(s, site, *args):
+    username = args[0]
+    sim_result = perform_similarity_checks(s, username)
+    if sim_result >= SIMILAR_THRESHOLD:
+        return True, u"Username similar to website"
+    else:
+        return False, ""
+
+
+# noinspection PyMissingTypeHints
+def perform_similarity_checks(post, name):
+    """
+    Performs 4 tests to determine similarity between links in the post and the user name
+    :param post: Test of the post
+    :param name: Username to compare against
+    :return: Float ratio of similarity
+    """
+    # Fix stupid spammer tricks
+    for p in COMMON_MALFORMED_PROTOCOLS:
+        post = post.replace(p[0], p[1])
+    # Find links in post
+    found_links = regex.findall(URL_REGEX, post)
+
+    links = []
+    for l in found_links:
+        if l[-1].isalnum():
+            links.append(l)
+        else:
+            links.append(l[:-1])
+
+    links = list(set(links))
+    t1 = 0
+    t2 = 0
+    t3 = 0
+    t4 = 0
+
+    if links:
+        for link in links:
+            domain = get_domain(link)
+            # Straight comparison
+            t1 = similar_ratio(domain, name)
+            # Strip all spaces check
+            t2 = similar_ratio(domain, name.replace(" ", ""))
+            # Strip all hypens
+            t3 = similar_ratio(domain.replace("-", ""), name.replace("-", ""))
+            # Strip both hypens and spaces
+            t4 = similar_ratio(domain.replace("-", "").replace(" ", ""), name.replace("-", "").replace(" ", ""))
+            # Have we already exceeded the threshold? End now if so, otherwise, check the next link
+            if max(t1, t2, t3, t4) >= SIMILAR_THRESHOLD:
+                return max(t1, t2, t3, t4)
+    else:
+        return 0
+    return max(t1, t2, t3, t4)
+
+
+# noinspection PyMissingTypeHints
+def similar_ratio(a, b):
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
+# noinspection PyMissingTypeHints
+def get_domain(s):
+    try:
+        extract = tld.get_tld(s, fix_protocol=True, as_object=True, )
+        domain = extract.domain
+    except TldDomainNotFound as e:
+        invalid_tld = RE_COMPILE.match(e.message).group(1)
+        # Attempt to replace the invalid protocol
+        s1 = s.replace(invalid_tld, 'http', 1)
+        try:
+            extract = tld.get_tld(s1, fix_protocol=True, as_object=True, )
+            domain = extract.domain
+        except TldDomainNotFound:
+            # Assume bad TLD and try one last fall back, just strip the trailing TLD and leading subdomain
+            parsed_uri = urlparse(s)
+            if len(parsed_uri.path.split(".")) >= 3:
+                domain = parsed_uri.path.split(".")[1]
+            else:
+                domain = parsed_uri.path.split(".")[0]
+    return domain
 
 
 # noinspection PyClassHasNoInit
@@ -261,7 +391,7 @@ class FindSpam:
         u"ಌ", "vashi?k[ae]r[ae]n", "babyli(ss|cious)", "garcinia", "cambogia", "acai ?berr",
         "(eye|skin|aging) ?cream", "b ?a ?m ?((w ?o ?w)|(w ?a ?r))", "online ?it ?guru",
         "abam26", "watch2live", "cogniq", "(serum|lift) ?eye", "tophealth", "poker[ -]?online",
-        "caralluma", "male\\Wperf", "anti[- ]?aging", "lumisse", "(ultra|berry|body)[ -]?ketone",
+        "caralluma", "male\\Wperf(?!ormer)", "anti[- ]?aging", "lumisse", "(ultra|berry|body)[ -]?ketone",
         "(cogni|oro)[ -]?(lift|plex)", "diabazole", "forskolin", "tonaderm", "luma(genex|lift)",
         "(skin|face|eye)[- ]?(serum|therapy|hydration|tip|renewal|gel|lotion|cream)",
         "(skin|eye)[- ]?lift", "(skin|herbal) ?care", "nuando[ -]?instant", "\\bnutra", "nitro[ -]?slim",
@@ -323,7 +453,7 @@ class FindSpam:
         r"smart(pc)?fixer\.(co|net|org)",
         r"password[\w-]*?(cracker|unlocker|reset|buster|master|remover)\.(co|net)",
         r"crack[\w-]*?(serial|soft|password)[\w-]*?\.(co|net)",
-        r"(downloader|pdf)converter\.(com|net)", r"sourceforge\.net[\w/]*convert",
+        r"(downloader|pdf)converter\.(com|net)",
         r"ware[\w-]*?download\.(com|net|info|in\W)",
         r"((\d|\w{3})livestream|livestream(ing|s))[\w]*?\.(com|net|tv)", r"\w+vs\w+live\.(com|net|tv)",
         r"(play|watch|cup|20)[\w-]*?(live|online)\.(com|net|tv)", r"worldcup\d[\w-]*?\.(com|net|tv|blogspot)",
@@ -368,6 +498,7 @@ class FindSpam:
         r"[\w-]{12}\.(webs|66ghz)\.com", r'online\.us[/"<]',
         r"ptvsports\d+.com",
         r"youth\Wserum",
+        r"buyviewsutube"
     ]
     city_list = [
         "Agra", "Amritsar", "Bangalore", "Bhopal", "Chandigarh", "Chennai", "Coimbatore", "Delhi", "Dubai", "Durgapur",
@@ -383,6 +514,10 @@ class FindSpam:
         {'regex': ur"(?is)\b({})\b|{}".format("|".join(bad_keywords), "|".join(bad_keywords_nwb)), 'all': True,
          'sites': [], 'reason': "bad keyword in {}", 'title': True, 'body': True, 'username': True,
          'stripcodeblocks': False, 'body_summary': True, 'max_rep': 4, 'max_score': 1},
+        # Pattern-matching product name: three keywords in a row at least once, or two in a row at least twice
+        {'method': pattern_product_name, 'all': True, 'sites': [], 'reason': "pattern-matching product name in {}",
+         'title': True, 'body': True, 'username': False, 'stripcodeblocks': True, 'body_summary': True,
+         'answers': False, 'max_rep': 4, 'max_score': 1},
         # gratis at the beginning of post, SoftwareRecs is exempt
         {'regex': ur"(?is)^.{0,200}\bgratis\b$", 'all': True,
          'sites': ['softwarerecs.stackexchange.com'], 'reason': "bad keyword in {}", 'title': True, 'body': True,
@@ -404,6 +539,9 @@ class FindSpam:
         {'regex': ur"(?i)\b(?!s.m.a.r.t)[a-z]\.+[a-z]\.+[a-z]\.+[a-z]\.+[a-z]\b", 'all': True,
          'sites': [], 'reason': "bad keyword in {}", 'title': True, 'body': False, 'username': False,
          'stripcodeblocks': False, 'body_summary': False, 'max_rep': 1, 'max_score': 0},
+        {'regex': ur'(?i)[\w\s]{0,20}help(?: a)?(?: weak)? postgraduate student(?: to)? write(?: a)? book\??',
+         'all': True, 'sites': [], 'reason': 'bad keyword in {}', 'title': True, 'body': False, 'username': False,
+         'stripcodeblocks': False, 'body_summary': False, 'max_rep': 20, 'max_score': 2},
         # Eltima: separated into its own method so we can constrain length
         {'method': has_eltima, 'all': True, 'sites': [], 'reason': "bad keyword in {}", 'title': False, 'body': True,
          'username': False, 'stripcodeblocks': False, 'body_summary': False, 'max_rep': 50, 'max_score': 0},
@@ -423,7 +561,10 @@ class FindSpam:
         # Bad health-related keywords in titles, health sites are exempt, flexible method
         {'method': has_health, 'all': False,
          'sites': ["stackoverflow.com", "superuser.com", "askubuntu.com", "drupal.stackexchange.com",
-                   "meta.stackexchange.com", "webapps.stackexchange.com", "security.stackexchange.com"],
+                   "meta.stackexchange.com", "security.stackexchange.com", "webapps.stackexchange.com",
+                   "apple.stackexchange.com", "graphicdesign.stackexchange.com", "workplace.stackexchange.com",
+                   "patents.stackexchange.com", "money.stackexchange.com", "gaming.stackexchange.com",
+                   "arduino.stackexchange.com"],
          'reason': "bad keyword in {}", 'title': True, 'body': False, 'username': False, 'stripcodeblocks': False,
          'body_summary': False, 'max_rep': 1, 'max_score': 0},
         # Bad health-related keywords in titles and posts, health sites are exempt
@@ -459,9 +600,10 @@ class FindSpam:
         # Bad keywords (only include link at end sites + SO, the other sites give false positives for these keywords)
         {'regex': ur"(?i)(?<!truth )serum|\b(?<!to )supplements\b", 'all': False,
          'sites': ["stackoverflow.com", "superuser.com", "askubuntu.com", "drupal.stackexchange.com",
-                   "meta.stackexchange.com", "security.stackexchange.com", "patents.stackexchange.com",
-                   "money.stackexchange.com", "gaming.stackexchange.com", "arduino.stackexchange.com",
-                   "workplace.stackexchange.com"],
+                   "meta.stackexchange.com", "security.stackexchange.com", "webapps.stackexchange.com",
+                   "apple.stackexchange.com", "graphicdesign.stackexchange.com", "workplace.stackexchange.com",
+                   "patents.stackexchange.com", "money.stackexchange.com", "gaming.stackexchange.com",
+                   "arduino.stackexchange.com"],
          'reason': "bad keyword in {}", 'title': True, 'body': True, 'username': False, 'stripcodeblocks': True,
          'body_summary': True, 'max_rep': 1, 'max_score': 0},
         # Mostly non-Latin alphabet
@@ -470,7 +612,8 @@ class FindSpam:
                    "islam.stackexchange.com", "japanese.stackexchange.com", "anime.stackexchange.com",
                    "hinduism.stackexchange.com", "judaism.stackexchange.com", "buddhism.stackexchange.com",
                    "chinese.stackexchange.com", "french.stackexchange.com", "spanish.stackexchange.com",
-                   "portuguese.stackexchange.com", "codegolf.stackexchange.com", "korean.stackexchange.com"],
+                   "portuguese.stackexchange.com", "codegolf.stackexchange.com", "korean.stackexchange.com",
+                   "ukrainian.stackexchange.com"],
          'reason': 'mostly non-Latin {}', 'title': True, 'body': True, 'username': False, 'stripcodeblocks': True,
          'body_summary': True, 'max_rep': 1, 'max_score': 0},
         # Mostly non-Latin alphabet, SO answers only
@@ -570,16 +713,17 @@ class FindSpam:
         # Shortened URL in an answer
         {'regex': ur"(?is)://(goo\.gl|bit\.ly|bit\.do|tinyurl\.com|fb\.me|cl\.ly|t\.co|is\.gd|j\.mp|tr\.im|ow\.ly|"
                   ur"wp\.me|alturl\.com|tiny\.cc|9nl\.me|post\.ly|dyo\.gs|bfy\.tw|amzn\.to|adf\.ly|adfoc\.us)/",
-         'all': True, 'sites': [], 'reason': "shortened URL in {}", 'title': False, 'body': True, 'username': False,
-         'stripcodeblocks': True, 'body_summary': False, 'questions': False, 'max_rep': 1, 'max_score': 0},
+         'all': True, 'sites': ["codegolf.stackexchange.com"], 'reason': "shortened URL in {}", 'title': False,
+         'body': True, 'username': False, 'stripcodeblocks': True, 'body_summary': False, 'questions': False,
+         'max_rep': 1, 'max_score': 0},
         # Link text without Latin characters
         {'regex': u">[^0-9A-Za-z<'\"]{3,}</a>", 'all': True,
          'sites': ["ja.stackoverflow.com", "ru.stackoverflow.com", "rus.stackexchange.com", "islam.stackexchange.com",
                    "japanese.stackexchange.com", "hinduism.stackexchange.com", "judaism.stackexchange.com",
                    "buddhism.stackexchange.com", "chinese.stackexchange.com", "russian.stackexchange.com",
-                   "codegolf.stackexchange.com", "korean.stackexchange.com"], 'reason': 'non-Latin link in {}',
-         'title': False, 'body': True, 'username': False, 'stripcodeblocks': True, 'body_summary': False,
-         'questions': False, 'max_rep': 1, 'max_score': 0},
+                   "codegolf.stackexchange.com", "korean.stackexchange.com", "ukrainian.stackexchange.com"],
+         'reason': 'non-Latin link in {}', 'title': False, 'body': True, 'username': False, 'stripcodeblocks': True,
+         'body_summary': False, 'questions': False, 'max_rep': 1, 'max_score': 0},
         # Link text with some non-Latin characters, answers only
         {'method': non_english_link, 'all': True, 'sites': ["pt.stackoverflow.com", "es.stackoverflow.com",
                                                             "ja.stackoverflow.com", "ru.stackoverflow.com",
@@ -589,7 +733,8 @@ class FindSpam:
                                                             "chinese.stackexchange.com", "russian.stackexchange.com",
                                                             "french.stackexchange.com", "portuguese.stackexchange.com",
                                                             "spanish.stackexchange.com", "codegolf.stackexchange.com",
-                                                            "korean.stackexchange.com", "esperanto.stackexchange.com"],
+                                                            "korean.stackexchange.com", "esperanto.stackexchange.com",
+                                                            "ukrainian.stackexchange.com"],
          'reason': 'non-English link in {}', 'title': False, 'body': True, 'username': False, 'stripcodeblocks': True,
          'body_summary': False, 'questions': False, 'max_rep': 1, 'max_score': 0},
         # Link text is one character within a word
@@ -719,15 +864,20 @@ class FindSpam:
          'body_summary': False, 'max_rep': 1, 'max_score': 0},
         {'regex': u"(?i)^jeff$", 'all': False, 'sites': ["parenting.stackexchange.com"],
          'reason': "blacklisted username", 'title': False, 'body': False, 'username': True,
-         'stripcodeblocks': False, 'body_summary': False, 'max_rep': 1, 'max_score': 0}
+         'stripcodeblocks': False, 'body_summary': False, 'max_rep': 1, 'max_score': 0},
+
+        # User name similar to link
+        {'method': username_similar_website, 'all': True, 'sites': [], 'reason': "username similar to website in {}",
+         'title': False, 'body': True, 'username': False, 'stripcodeblocks': False, 'body_summary': True,
+         'max_rep': 50, 'max_score': 0, 'questions': False},
     ]
 
     @staticmethod
-    def test_post(title, body, user_name, site, is_answer, body_is_summary, user_rep, post_score):
+    def test_post(post):
         result = []
         why = {'title': [], 'body': [], 'username': []}
         for rule in FindSpam.rules:
-            body_to_check = body
+            body_to_check = post.body
             is_regex_check = 'regex' in rule
             try:
                 check_if_answer = rule['answers']
@@ -749,41 +899,43 @@ class FindSpam:
             if rule['reason'] == 'Phone number detected in {}':
                 body_to_check = regex.sub("<img[^>]+>", "", body_to_check)
                 body_to_check = regex.sub("<a[^>]+>", "", body_to_check)
-            if rule['all'] != (site in rule['sites']) and user_rep <= rule['max_rep'] and \
-                    post_score <= rule['max_score']:
+            if rule['all'] != (post.post_site in rule['sites']) and post.owner_rep <= rule['max_rep'] and \
+                    post.post_score <= rule['max_score']:
                 matched_body = None
                 compiled_regex = None
                 if is_regex_check:
                     compiled_regex = regex.compile(rule['regex'], regex.UNICODE, city=FindSpam.city_list)
                     # using a named list \L in some regexes
-                    matched_title = compiled_regex.findall(title)
-                    matched_username = compiled_regex.findall(user_name)
-                    if (not body_is_summary or rule['body_summary']) and (not is_answer or check_if_answer) and \
-                            (is_answer or check_if_question):
+                    matched_title = compiled_regex.findall(post.title)
+                    matched_username = compiled_regex.findall(post.user_name)
+                    if (not post.body_is_summary or rule['body_summary']) and \
+                            (not post.is_answer or check_if_answer) and \
+                            (post.is_answer or check_if_question):
                         matched_body = compiled_regex.findall(body_to_check)
                 else:
                     assert 'method' in rule
-                    matched_title, why_title = rule['method'](title, site)
+                    matched_title, why_title = rule['method'](post.title, post.post_site, post.user_name)
                     if matched_title and rule['title']:
                         why["title"].append(u"Title - {}".format(why_title))
-                    matched_username, why_username = rule['method'](user_name, site)
+                    matched_username, why_username = rule['method'](post.user_name, post.post_site, post.user_name)
                     if matched_username and rule['username']:
                         why["username"].append(u"Username - {}".format(why_username))
-                    if (not body_is_summary or rule['body_summary']) and (not is_answer or check_if_answer) and \
-                            (is_answer or check_if_question):
-                        matched_body, why_body = rule['method'](body_to_check, site)
+                    if (not post.body_is_summary or rule['body_summary']) and \
+                            (not post.is_answer or check_if_answer) and \
+                            (post.is_answer or check_if_question):
+                        matched_body, why_body = rule['method'](body_to_check, post.post_site, post.user_name)
                         if matched_body and rule['body']:
                             why["body"].append(u"Post - {}".format(why_body))
                 if matched_title and rule['title']:
-                    why["title"].append(FindSpam.generate_why(compiled_regex, title, u"Title", is_regex_check))
+                    why["title"].append(FindSpam.generate_why(compiled_regex, post.title, u"Title", is_regex_check))
                     result.append(rule['reason'].replace("{}", "title"))
                 if matched_username and rule['username']:
-                    why["username"].append(FindSpam.generate_why(compiled_regex, user_name, u"Username",
+                    why["username"].append(FindSpam.generate_why(compiled_regex, post.user_name, u"Username",
                                                                  is_regex_check))
                     result.append(rule['reason'].replace("{}", "username"))
                 if matched_body and rule['body']:
                     why["body"].append(FindSpam.generate_why(compiled_regex, body_to_check, u"Body", is_regex_check))
-                    type_of_post = "answer" if is_answer else "body"
+                    type_of_post = "answer" if post.is_answer else "body"
                     result.append(rule['reason'].replace("{}", type_of_post))
         result = list(set(result))
         result.sort()

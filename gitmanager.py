@@ -1,4 +1,8 @@
-from sh import git
+import platform
+if 'windows' in str(platform.platform()).lower():
+    print "Git support not available in Windows."
+else:
+    from sh import git
 from requests.auth import HTTPBasicAuth
 from globalvars import GlobalVars
 import requests
@@ -10,6 +14,10 @@ import json
 class GitManager:
     @staticmethod
     def add_to_blacklist(**kwargs):
+        if 'windows' in str(platform.platform()).lower():
+            print "Git support not available in Windows."
+            return (False, "Git support not available in Windows.")
+
         blacklist = kwargs.get("blacklist", "")
         item_to_blacklist = kwargs.get("item_to_blacklist", "")
         username = kwargs.get("username", "")
@@ -79,7 +87,8 @@ class GitManager:
         git.reset("HEAD")
 
         git.add(blacklist_file_name)
-        git.commit("-m", u"Auto blacklist of {0} by {1} --autopull".format(item_to_blacklist, username))
+        git.commit("--author='SmokeDetector <smokey@erwaysoftware.com>'",
+                   "-m", u"Auto blacklist of {0} by {1} --autopull".format(item_to_blacklist, username))
 
         if code_permissions:
             git.checkout("master")
@@ -135,4 +144,6 @@ class GitManager:
 
     @staticmethod
     def current_git_status():
+        if 'windows' in str(platform.platform()).lower():
+            return "Git support not available in Windows."
         return git.status()

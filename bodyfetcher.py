@@ -1,5 +1,5 @@
 from spamhandling import handle_spam, check_if_spam
-from datahandling import add_or_update_api_data, clear_api_data, store_bodyfetcher_queue
+from datahandling import add_or_update_api_data, clear_api_data, store_bodyfetcher_queue, store_bodyfetcher_max_ids
 from globalvars import GlobalVars
 from operator import itemgetter
 from datetime import datetime
@@ -7,11 +7,13 @@ import json
 import time
 import threading
 import requests
+from classes import Post
 
 
 # noinspection PyClassHasNoInit,PyBroadException
 class BodyFetcher:
     queue = {}
+    previous_max_ids = {}
 
     special_cases = {
         "math.stackexchange.com": 15,
@@ -62,6 +64,7 @@ class BodyFetcher:
 
     api_data_lock = threading.Lock()
     queue_modify_lock = threading.Lock()
+    max_ids_modify_lock = threading.Lock()
 
     def add_to_queue(self, post, should_check_site=False):
         mse_sandbox_id = 3122
@@ -94,12 +97,10 @@ class BodyFetcher:
         for site, values in self.queue.iteritems():
             if site in self.special_cases:
                 if len(values) >= self.special_cases[site]:
-                    print "site {0} met special case quota, fetching...".format(site)
                     self.make_api_call_for_site(site)
                     return
             if site in self.time_sensitive:
                 if len(values) >= 1 and datetime.utcnow().hour in range(4, 12):
-                    print "site {0} has activity during peak spam time, fetching...".format(site)
                     self.make_api_call_for_site(site)
                     return
 
@@ -122,9 +123,42 @@ class BodyFetcher:
             return
 
         self.queue_modify_lock.acquire()
-        posts = self.queue.pop(site)
+        new_post_ids = self.queue.pop(site)
         store_bodyfetcher_queue()
         self.queue_modify_lock.release()
+
+        self.max_ids_modify_lock.acquire()
+
+        if site in self.previous_max_ids and max(new_post_ids) > self.previous_max_ids[site]:
+            previous_max_id = self.previous_max_ids[site]
+            intermediate_posts = range(previous_max_id + 1, max(new_post_ids))
+
+            # We don't want to go over the 100-post API cutoff, so take the last
+            # (100-len(new_post_ids)) from intermediate_posts
+
+            intermediate_posts = intermediate_posts[(len(new_post_ids) - 100):]
+
+            # new_post_ids could contain edited posts, so merge it back in
+            combined = intermediate_posts + new_post_ids
+
+            # Could be duplicates, so uniquify
+            posts = list(set(combined))
+        else:
+            posts = new_post_ids
+
+        try:
+            if max(new_post_ids) > self.previous_max_ids[site]:
+                self.previous_max_ids[site] = max(new_post_ids)
+                store_bodyfetcher_max_ids()
+        except KeyError:
+            self.previous_max_ids[site] = max(new_post_ids)
+            store_bodyfetcher_max_ids()
+
+        self.max_ids_modify_lock.release()
+
+        print("New IDs / Hybrid Intermediate IDs for {0}:".format(site))
+        print(sorted(new_post_ids))
+        print(sorted(posts))
 
         question_modifier = ""
         pagesize_modifier = ""
@@ -166,6 +200,7 @@ class BodyFetcher:
             else:
                 self.queue[site] = posts
             self.queue_modify_lock.release()
+            GlobalVars.api_request_lock.release()
             return
 
         self.api_data_lock.acquire()
@@ -227,104 +262,39 @@ class BodyFetcher:
             if "title" not in post or "body" not in post:
                 continue
 
+            post['site'] = site
+            post_ = Post(api_response=post)
+
             num_scanned += 1
 
-            title = GlobalVars.parser.unescape(post["title"])
-            body = GlobalVars.parser.unescape(post["body"])
-            link = post["link"]
-            post_score = post["score"]
-            up_vote_count = post["up_vote_count"]
-            down_vote_count = post["down_vote_count"]
-            try:
-                owner_name = GlobalVars.parser.unescape(post["owner"]["display_name"])
-                owner_link = post["owner"]["link"]
-                owner_rep = post["owner"]["reputation"]
-            except:
-                owner_name = ""
-                owner_link = ""
-                owner_rep = 0
-            q_id = str(post["question_id"])
+            is_spam, reason, why = check_if_spam(post_)
 
-            is_spam, reason, why = check_if_spam(title=title,
-                                                 body=body,
-                                                 user_name=owner_name,
-                                                 user_url=owner_link,
-                                                 post_site=site,
-                                                 post_id=q_id,
-                                                 is_answer=False,
-                                                 body_is_summary=False,
-                                                 owner_rep=owner_rep,
-                                                 post_score=post_score)
             if is_spam:
                 try:
-                    handle_spam(title=title,
-                                body=body,
-                                poster=owner_name,
-                                site=site,
-                                post_url=link,
-                                poster_url=owner_link,
-                                post_id=q_id,
+                    handle_spam(post=post_,
                                 reasons=reason,
-                                is_answer=False,
-                                why=why,
-                                owner_rep=owner_rep,
-                                post_score=post_score,
-                                up_vote_count=up_vote_count,
-                                down_vote_count=down_vote_count,
-                                question_id=None)
+                                why=why)
                 except:
-                    print "NOP"
+                    pass
+
             try:
                 for answer in post["answers"]:
                     num_scanned += 1
-                    answer_title = ""
-                    body = answer["body"]
-                    print "got answer from owner with name " + owner_name
-                    link = answer["link"]
-                    a_id = str(answer["answer_id"])
-                    post_score = answer["score"]
-                    up_vote_count = answer["up_vote_count"]
-                    down_vote_count = answer["down_vote_count"]
-                    try:
-                        owner_name = GlobalVars.parser.unescape(answer["owner"]["display_name"])
-                        owner_link = answer["owner"]["link"]
-                        owner_rep = answer["owner"]["reputation"]
-                    except:
-                        owner_name = ""
-                        owner_link = ""
-                        owner_rep = 0
+                    answer["IsAnswer"] = True  # Necesssary for Post object
+                    answer["title"] = ""  # Necessary for proper Post object creation
+                    answer["site"] = site  # Necessary for proper Post object creation
+                    answer_ = Post(api_response=answer)
 
-                    is_spam, reason, why = check_if_spam(title=answer_title,
-                                                         body=body,
-                                                         user_name=owner_name,
-                                                         user_url=owner_link,
-                                                         post_site=site,
-                                                         post_id=a_id,
-                                                         is_answer=True,
-                                                         body_is_summary=False,
-                                                         owner_rep=owner_rep,
-                                                         post_score=post_score)
+                    is_spam, reason, why = check_if_spam(post_)
                     if is_spam:
                         try:
-                            handle_spam(title=title,
-                                        body=body,
-                                        poster=owner_name,
-                                        site=site,
-                                        post_url=link,
-                                        poster_url=owner_link,
-                                        post_id=a_id,
+                            handle_spam(answer_,
                                         reasons=reason,
-                                        is_answer=True,
-                                        why=why,
-                                        owner_rep=owner_rep,
-                                        post_score=post_score,
-                                        up_vote_count=up_vote_count,
-                                        down_vote_count=down_vote_count,
-                                        question_id=q_id)
+                                        why=why)
                         except:
-                            print "NOP"
+                            pass
             except:
-                print "no answers"
+                pass
 
         end_time = time.time()
         GlobalVars.posts_scan_stats_lock.acquire()

@@ -6,6 +6,7 @@ import websocket
 # noinspection PyPackageRequirements
 from bs4 import BeautifulSoup
 from threading import Thread
+from urlparse import urlparse
 import metasmoke
 from globalvars import GlobalVars
 import datahandling
@@ -15,11 +16,11 @@ import datahandling
 class DeletionWatcher:
     @classmethod
     def update_site_id_list(self):
-        soup = BeautifulSoup(requests.get("http://meta.stackexchange.com/topbar/site-switcher/site-list").text,
+        soup = BeautifulSoup(requests.get("https://meta.stackexchange.com/topbar/site-switcher/site-list").text,
                              "html.parser")
         site_id_dict = {}
         for site in soup.findAll("a", attrs={"data-id": True}):
-            site_name = site["href"][2:]
+            site_name = urlparse(site["href"]).netloc
             site_id = site["data-id"]
             site_id_dict[site_name] = site_id
         GlobalVars.site_id_dict = site_id_dict
@@ -40,7 +41,7 @@ class DeletionWatcher:
             return
         site_id = GlobalVars.site_id_dict[post_site]
 
-        ws = websocket.create_connection("ws://qa.sockets.stackexchange.com/")
+        ws = websocket.create_connection("wss://qa.sockets.stackexchange.com/")
         ws.send(site_id + "-question-" + question_id)
 
         while time.time() < time_to_check:

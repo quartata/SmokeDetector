@@ -71,7 +71,7 @@ eduCBA
 Solid[ -]?SEO[ -]?Tools
 maxman ?power
 niagen
-testo\W(e?x|black)
+testo\W(e?x|black|ultra|muscle)
 day ?trading ?academy
 skinology
 folliplex
@@ -143,7 +143,7 @@ we are a team of (highly|professionals)
 booty pop
 Beard Czar
 Cianix
-Falcon\sTactical\sFlashlight
+(falcon|gladiator|tactical)\Wflashlights?
 Juvanere
 age-opposing
 revived\syouth
@@ -273,3 +273,56 @@ pure\Wvitamen
 staminon
 hydralie
 pro\W?shred
+little\Wpink\Wpill
+vigor\Wexcel
+optimal\Wrock
+slim\Wfit\W180
+azienda\Wcollagen
+testo\Wboost
+internal\W911
+neuphoric\Wskin
+true\Wbrilliance
+neuroignite
+muscle\Wxtx
+test\Wboost\Welite
+gs\Wrichcopy\W360
+collamask
+skincell\Wpro
+naturacel
+luminescent\Wserum
+rx24
+omega\Wrejuvenol
+spa\Welixir
+ultra\W?flex
+deep\Wsea\Wskin
+hypertone\Wforce
+dietary\Wsupplement
+rexadrene
+neurolon
+testosterone\Wreload
+pure\Wnitro
+contact us now
+cel[ae]xas
+nutrition.*plan
+infinite\Wcleanse
+helix6
+intellex\Wplus
+andronite
+idol\Wtan
+max\Wgrow\Wxtreme
+mind\Wbooster
+\w*cyberhack\w*@\w*mail\.com
+secret\Wallure\Wcream
+sex\Wscandal
+kratos\Wmax
+safe\Wdriving\Wbreathaly(s|z)er
+rapid\Wageless
+better\Wbeard\Wclub
+renuglow
+duplicate\Wfile\Wdeleter
+money\Wgenerator
+nitro\Wbuild\Wplus
+iq2\Wnootropic
+wrinkle\Wcouture
+favorite Riemann zeta function
+iq2\Wbrain\Wformula
