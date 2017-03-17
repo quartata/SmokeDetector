@@ -104,17 +104,7 @@ class Metasmoke:
                 if user is not None:
                     datahandling.add_blacklisted_user(user, "metasmoke", post.post_url)
                 why = u"Post manually reported by user *{}* from metasmoke.\n".format(message["report"]["user"])
-                postobj = classes.Post(api_response={'title': post.title, 'body': post.body,
-                                                     'owner': {'display_name': post.owner_name,
-                                                               'reputation': post.owner_rep,
-                                                               'link': post.owner_url},
-                                                     'site': post.site,
-                                                     'IsAnswer': (post.post_type == "answer"),
-                                                     'score': post.score, 'link': post.post_url,
-                                                     'question_id': post.post_id,
-                                                     'up_vote_count': post.up_vote_count,
-                                                     'down_vote_count': post.down_vote_count})
-                spamhandling.handle_spam(post=postobj,
+                spamhandling.handle_spam(post=post,
                                          reasons=["Manually reported " + post.post_type],
                                          why=why)
             elif "commit_status" in message:
