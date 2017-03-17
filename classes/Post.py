@@ -12,6 +12,7 @@ class Post:
     _post_id = ""
     _post_score = 0
     _post_site = ""
+    _post_url = ""
     _title = ""
     _user_name = ""
     _user_url = ""
@@ -113,10 +114,16 @@ class Post:
         self._title = GlobalVars.parser.unescape(response["title"])
         self._body = GlobalVars.parser.unescape(response["body"])
 
-        if "IsAnswer" in response and response["IsAnswer"] is True:
-            self._is_answer = True
+        if 'post_type' in response:
+            if str(response['post_type']).lower() == 'answer':
+                self._is_answer = True
+            else:
+                self._is_answer = False
         else:
-            self._is_answer = False
+            if "IsAnswer" in response and response["IsAnswer"] is True:
+                self._is_answer = True
+            else:
+                self._is_answer = False
 
         if "BodyIsSummary" in response and response["BodyIsSummary"] is True:
             self._body_is_summary = True

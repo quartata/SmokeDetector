@@ -1137,32 +1137,31 @@ def command_report_post(ev_room, ev_user_id, wrap2, message_parts, message_url,
                                                       "which would slow down reports.")
     for url in urls:
         index += 1
-        post_data = api_get_post(url)
-        if post_data is None:
+        post = api_get_post(url)
+        if post is None:
             output.append("Post {}: That does not look like a valid post URL.".format(index))
             continue
-        if post_data is False:
+        if post is type(bool) and post is False:
             output.append("Post {}: Could not find data for this post in the API. "
                           "It may already have been deleted.".format(index))
             continue
-        if has_already_been_posted(post_data.site, post_data.post_id, post_data.title) and not is_false_positive(
-                (post_data.post_id, post_data.site)):
+        if has_already_been_posted(post.site, post.post_id, post.title) and not is_false_positive(
+                (post.post_id, post.site)):
             # Don't re-report if the post wasn't marked as a false positive. If it was marked as a false positive,
             # this re-report might be attempting to correct that/fix a mistake/etc.
             output.append("Post {}: Already recently reported".format(index))
             continue
-        post_data.is_answer = (post_data.post_type == "answer")
-        post = Post(api_response=post_data.as_dict)
-        user = get_user_from_url(post_data.owner_url)
+        post.is_answer = (post.post_type == "answer")
+        user = get_user_from_url(post.owner_url)
         if user is not None:
-            add_blacklisted_user(user, message_url, post_data.post_url)
+            add_blacklisted_user(user, message_url, post.post_url)
         why = u"Post manually reported by user *{}* in room *{}*.\n".format(ev_user_name,
                                                                             ev_room_name.decode('utf-8'))
         batch = ""
         if len(urls) > 1:
             batch = " (batch report: post {} out of {})".format(index, len(urls))
         handle_spam(post=post,
-                    reasons=["Manually reported " + post_data.post_type + batch],
+                    reasons=["Manually reported " + post.post_type + batch],
                     why=why)
     if 1 < len(urls) > len(output):
         add_or_update_multiple_reporter(ev_user_id, wrap2.host, time.time())

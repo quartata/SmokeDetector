@@ -94,28 +94,28 @@ class Metasmoke:
                 post_site_id = parsing.fetch_post_id_and_site_from_url(message["fp"]["post_link"])
                 datahandling.add_false_positive(post_site_id[0:2])
             elif "report" in message:
-                post_data = apigetpost.api_get_post(message["report"]["post_link"])
-                if post_data is None or post_data is False:
+                post = apigetpost.api_get_post(message["report"]["post_link"])
+                if post is None or post is False:
                     return
-                if datahandling.has_already_been_posted(post_data.site, post_data.post_id, post_data.title) \
-                        and not datahandling.is_false_positive((post_data.post_id, post_data.site)):
+                if datahandling.has_already_been_posted(post.site, post.post_id, post.title) \
+                        and not datahandling.is_false_positive((post.post_id, post.site)):
                     return
-                user = parsing.get_user_from_url(post_data.owner_url)
+                user = parsing.get_user_from_url(post.owner_url)
                 if user is not None:
-                    datahandling.add_blacklisted_user(user, "metasmoke", post_data.post_url)
+                    datahandling.add_blacklisted_user(user, "metasmoke", post.post_url)
                 why = u"Post manually reported by user *{}* from metasmoke.\n".format(message["report"]["user"])
-                postobj = classes.Post(api_response={'title': post_data.title, 'body': post_data.body,
-                                                     'owner': {'display_name': post_data.owner_name,
-                                                               'reputation': post_data.owner_rep,
-                                                               'link': post_data.owner_url},
-                                                     'site': post_data.site,
-                                                     'IsAnswer': (post_data.post_type == "answer"),
-                                                     'score': post_data.score, 'link': post_data.post_url,
-                                                     'question_id': post_data.post_id,
-                                                     'up_vote_count': post_data.up_vote_count,
-                                                     'down_vote_count': post_data.down_vote_count})
+                postobj = classes.Post(api_response={'title': post.title, 'body': post.body,
+                                                     'owner': {'display_name': post.owner_name,
+                                                               'reputation': post.owner_rep,
+                                                               'link': post.owner_url},
+                                                     'site': post.site,
+                                                     'IsAnswer': (post.post_type == "answer"),
+                                                     'score': post.score, 'link': post.post_url,
+                                                     'question_id': post.post_id,
+                                                     'up_vote_count': post.up_vote_count,
+                                                     'down_vote_count': post.down_vote_count})
                 spamhandling.handle_spam(post=postobj,
-                                         reasons=["Manually reported " + post_data.post_type],
+                                         reasons=["Manually reported " + post.post_type],
                                          why=why)
             elif "commit_status" in message:
                 c = message["commit_status"]
