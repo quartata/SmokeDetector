@@ -27,9 +27,15 @@ class Post:
                 self._parent = parent
 
         if json_data is not None:
-            self._parse_json_post(json_data)
+            if type(json_data) not in [str, json]:
+                raise TypeError("JSON data being passed should be a string, or a json object.")
+            else:
+                self._parse_json_post(json_data)
         elif api_response is not None:
-            self._parse_api_post(api_response)
+            if type(api_response) is not dict:
+                raise TypeError("An API response must be a dictionary item for it to be usable.")
+            else:
+                self._parse_api_post(api_response)
         else:
             raise ValueError("Must provide either JSON Data or an API Response object for Post object.")
         # self._title = title
@@ -50,6 +56,12 @@ class Post:
                    'is_answer=' + str(self.is_answer), 'body_is_summary=' + str(self.body_is_summary),
                    'owner_rep=' + str(self.owner_rep), 'post_score=' + str(self.post_score)]
         return "%s(%s)" % (type_name, ', '.join(dataset))
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __getitem__(self, item):
+        getattr(self, item)
 
     def _parse_json_post(self, json_data):
         # type: (str) -> None
