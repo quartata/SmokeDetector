@@ -39,16 +39,6 @@ class Post:
                 self._parse_api_post(api_response)
         else:
             raise ValueError("Must provide either JSON Data or an API Response object for Post object.")
-        # self._title = title
-        # self._body = body
-        # self._user_name = user_name
-        # self._user_url = user_url
-        # self._post_site = post_site
-        # self._post_id = post_id
-        # self._is_answer = is_answer
-        # self._body_is_summary = body_is_summary
-        # self._owner_rep = owner_rep
-        # self._post_score = post_score
 
     def __repr__(self):
         type_name = type(self).__name__
