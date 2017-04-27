@@ -177,6 +177,29 @@ class Post:
         return str(html.unescape(title).strip())
 
     @property
+    def as_dict(self):
+        # Basically, return this to the dict-style response that Post(api_data=DATA) expects, for proper parsing.
+        dictdata = {
+            'title': self.title,
+            'body': self.body,
+            'owner': {'display_name': self.user_name, 'link': self.user_url, 'reputation': self.owner_rep},
+            'site': self.site,
+            'question_id': self.post_id,
+            'link': self.post_url,
+            'score': self.post_score,
+            'up_vote_count': self.up_vote_count,
+            'down_vote_count': self.down_vote_count,
+        }
+        # noinspection PyBroadException
+        try:
+            dictdata['IsAnswer'] = getattr(self, 'IsAnswer')
+        except:
+            dictdata['IsAnswer'] = False  # Assume it's not an answer
+
+        return dictdata
+
+    
+    @property
     def answers(self):
         # noinspection PyBroadException
         try:
