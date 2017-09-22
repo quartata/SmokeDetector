@@ -27,7 +27,7 @@ from classes import Post
 # TODO: pull out code block to get user_id, chat_site, room_id into function
 # TODO: Return result for all functions should be similar (tuple/named tuple?)
 # TODO: Do we need uid == -2 check?  Turn into "is_user_valid" check
-# TODO: Consistant return structure
+# TODO: Consistent return structure
 #   if return...else return vs if return...return
 
 
@@ -687,12 +687,22 @@ def command_allspam(message_parts, ev_room, ev_user_id, wrap2, ev_user_name, ev_
     :param kwargs: No additional arguments expected
     :return:
     """
+    # TODO: Remove all allspam handling code
     if len(message_parts) != 2:
         return Response(command_status=False, message="1 argument expected")
     url = message_parts[1]
     user = get_user_from_url(url)
     if user is None:
         return Response(command_status=True, message="That doesn't look like a valid user URL.")
+    # Detect whether link is to network profile or site profile
+    if user[0] == 'stackexchange.com':
+        # TODO: Handle network wide user
+    else:
+        # TODO: Get user from SE API to check rep https://api.stackexchange.com/docs/users-by-ids
+        # TODO: Get posts from API https://api.stackexchange.com/docs/posts-on-users
+        # TODO: Check number
+        # TODO: Run through handle spam
+
     why = u"User manually reported by *{}* in room *{}*.\n".format(ev_user_name, ev_room_name.decode('utf-8'))
     handle_user_with_all_spam(user, why)
     return Response(command_status=True, message=None)
