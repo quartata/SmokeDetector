@@ -695,13 +695,40 @@ def command_allspam(message_parts, ev_room, ev_user_id, wrap2, ev_user_name, ev_
     if user is None:
         return Response(command_status=True, message="That doesn't look like a valid user URL.")
     # Detect whether link is to network profile or site profile
+    # TODO: Extract posts from both, then handle them outside the if block
+    user_posts = []
     if user[0] == 'stackexchange.com':
         # TODO: Handle network wide user
+        pass
     else:
-        # TODO: Get user from SE API to check rep https://api.stackexchange.com/docs/users-by-ids
-        # TODO: Get posts from API https://api.stackexchange.com/docs/posts-on-users
-        # TODO: Check number
-        # TODO: Run through handle spam
+        if user[0] == 'mathoverflow.net':
+            site = 'mathoverflow.net'
+        else:
+            site = user[0].split()[0]
+        # TODO: Fix filter - can I use the other one or do I need to create a new one?
+        request_url = "http://api.stackexchange.com/2.2/users/{}/posts?site={}".format(site, user[1])
+        # Respect backoffs etc
+        GlobalVars.api_request_lock.acquire()
+        if GlobalVars.api_backoff_time > time.time():
+            time.sleep(GlobalVars.api_backoff_time - time.time() + 2)
+        res = requests.get(request_url).json()
+        if "backoff" in res:
+            if GlobalVars.api_backoff_time < time.time() + res["backoff"]:
+                GlobalVars.api_backoff_time = time.time() + res["backoff"]
+        GlobalVars.api_request_lock.release()
+        if 'items' not in res or len(res['items']) == 0:
+            return Response(command_status=False, message="The specified user has no posts on this site.")
+        posts = res['items']
+        if posts[0]['owner']['reputation'] > 100:
+            return Response(command_status=False, message="The specified user's reputation is abnormally high. " \
+                                                          "Please consider flagging for moderator attention, otherwise"\
+                                                          "use !!/report on the posts individually.")
+        if len(posts) > 10:
+            return Response(command_status=False, message="The specified user has an abnormally high number of spam " \
+                                                          "posts. Please consider flagging for moderator attention, " \
+                                                          "otherwise use !!/report on the posts individually.")
+        user_posts += posts
+    # TODO: Run through handle spam
 
     why = u"User manually reported by *{}* in room *{}*.\n".format(ev_user_name, ev_room_name.decode('utf-8'))
     handle_user_with_all_spam(user, why)
