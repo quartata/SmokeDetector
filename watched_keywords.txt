@@ -11,7 +11,6 @@
 1494915647	tripleee	goo\.gl/dCH6UH
 1494929269	tripleee	thewellnesscorner\.com
 1494929399	tripleee	optisolbusiness\.com
-1494945223	tripleee	menpowersupplement\.com
 1494997469	tripleee	careinfo\.in
 1494997580	tripleee	carebaba\.com
 1494999587	tripleee	punjabimp3club\.com
@@ -32,7 +31,6 @@
 1495083202	tripleee	getessayscheap\.com
 1495085157	tripleee	anavar
 1495087353	tripleee	yeezyboost350v2uk\.com
-1495091607	tripleee	realperfecthealth\.com
 1495096034	tripleee	coolerbane\.ir
 1495100968	tripleee	bootypopcreamtry\.com
 1495101269	tripleee	8622053225
@@ -97,7 +95,6 @@
 1495795117	tripleee	futurerealtyindia\.com
 1495795158	tripleee	8882335050
 1495979303	Mithrandir	indisweets\.com
-1495998849	Mithrandir	reshamshah\.com
 1496032220	tripleee	luminary\Wrevitalizing
 1496038730	tripleee	govtjobsrch\.com
 1496048159	tripleee	krasa\W?(anti|cream|skin)
@@ -556,7 +553,6 @@
 1501160616	Mithrandir	blackhatethicalhacking\.com
 1501166479	Mithrandir	koyoele.in
 1501175814	quartata	couppay.ind.in
-1501250088	Glorfindel	hvantagetechnologies\.com
 1501250114	Glorfindel	wklaw\.com
 1501278997	doppelgreener	modup.net
 1501323411	Glorfindel	kellytechno\.com
@@ -588,7 +584,6 @@
 1501775895	Mithrandir	globalscarves\.com
 1501785257	Yvette Colomb	dogsnaturallymagazine\.com
 1501787026	NobodyNada	bestbassamp\.org
-1501824993	John Militer	getsupplementhelp\.com
 1501832319	Glorfindel	resumevogue\.com
 1501862331	Mithrandir	timex247\.com
 1501928226	Glorfindel	webrife\.com
@@ -670,7 +665,6 @@
 1503037295	tripleee	allevia
 1503042876	tripleee	conferenceneardelhi\.com
 1503043263	tripleee	conferenceneardelhi\.in
-1503043834	tripleee	beautysk\.com
 1503045015	suraj	theoldgnews\.com
 1503050935	CalvT븃	storearmy\.com
 1503052331	doppelgreener	dssindia\.com
@@ -917,8 +911,6 @@
 1505056382	Glorfindel	ihomepet\.com
 1505080525	quartata	trishaescort\.in
 1505096866	Yvette Colomb	wildernesscat\.com
-1505106650	tripleee	semmiami\.com
-1505107377	tripleee	wellness350\.com
 1505108167	tripleee	airfreightbazaar\.com
 1505109971	tripleee	malimgroup\.com
 1505113769	Glorfindel	indexexchange\.ae
@@ -947,7 +939,6 @@
 1505206342	Glorfindel	jattmix\.com
 1505207313	Glorfindel	mobilunity\.com
 1505208399	tripleee	altime\W?cream
-1505211577	tripleee	apkroidstore\.blogspot\.com
 1505213589	tripleee	alphaskins\.com
 1505216038	tripleee	1?800\W?984\W?7414
 1505217911	Glorfindel	rasacorporation\.com
@@ -1063,3 +1054,93 @@
 1506062681	Magisch	passwordmanagers\.net
 1506064815	tripleee	garagedoorsrepairwoodlandhillsca\.com
 1506065246	tripleee	greetingsforchristmas\.com
+1506076511	tripleee	giridarshini\.com
+1506076711	tripleee	9880141442
+1506103192	NobodyNada	appnaz\.com
+1506127129	bwDraco	bestchange\.com
+1506143345	NobodyNada	5\WHour\WForce
+1506325152	Glorfindel	@DigitEMB
+1506328960	Glorfindel	elocenter\.net
+1506329024	Glorfindel	vinpearls-namhoian\.com
+1506336835	suraj	krivtsov(?:oil)?(?:gas)?consultants?@(?:yandex|mail)\.ru
+1506336876	suraj	neftegazconsultant@yandex\.ru
+1506336898	suraj	info\.russiatrading@mail\.ru
+1506340046	Glorfindel	marketsandmarkets\.com
+1506342725	Glorfindel	affiliateclues\.com
+1506344058	Glorfindel	wonderware?intouchusers\.com
+1506349956	Glorfindel	gopcsecure\.com
+1506350077	Glorfindel	bingdroid\.com
+1506357517	bwDraco	phuk(ing)?
+1506359998	tripleee	vitaskin
+1506360472	tripleee	bookmybabes\.com
+1506365531	Glorfindel	wrestlemaniamasti\.website
+1506400556	tripleee	worksmart\.co\.uk
+1506412658	tripleee	nainawalker\.blogspot\.com
+1506412924	tripleee	kitchengearpros\.com
+1506414896	Glorfindel	eventeca\.com
+1506417201	tripleee	skylifr\.com
+1506418667	Glorfindel	freetoolonline\.com
+1506431853	tripleee	fortraxitonetry\.com
+1506432381	tripleee	socialseo4you\.wordpress\.com
+1506440976	Glorfindel	indwiki\.com
+1506454713	Glorfindel	studarea\.com
+1506493189	tripleee	weightedblanketusa\.com
+1506495170	tripleee	1?844\W?205\W?0712
+1506496250	tripleee	bomeans\.com
+1506498126	tripleee	cheappairmax\.com
+1506502507	tripleee	eva\W?daily
+1506503383	tripleee	offersdealscoupons\.store
+1506505048	tripleee	better\W?bust
+1506508121	tripleee	recruitmentresult\.com
+1506509191	paper1111	powerjackpowerinverter.(?:de|co\.uk)
+1506512254	tripleee	repairz\.ie
+1506516146	tripleee	quicken-phone-support\.com
+1506524527	Mithrandir	uchi\.ru
+1506573521	tripleee	herbal\W?xt
+1506575193	tripleee	trudivine
+1506584308	Glorfindel	inwizards\.com
+1506585940	Glorfindel	ztwshop\.com
+1506588646	Glorfindel	xhorsevvdi\.com
+1506593215	tripleee	bella\W?radiance
+1506595075	paper1111	mcxprices\.com
+1506597209	Glorfindel	hdfree4u\.com
+1506598747	tripleee	wetechtuts\.com
+1506602688	Glorfindel	comingit\.com
+1506604373	tripleee	digitembdesigns\.tumblr\.com
+1506657871	tripleee	latestjordans2016\.com
+1506658986	tripleee	natrogix
+1506664625	Glorfindel	softwaresuggest\.com
+1506666164	Glorfindel	techlightnews\.com
+1506669737	Glorfindel	buildyourorg\.com
+1506671869	tripleee	reviewfantasy\.com
+1506687270	Glorfindel	speedyfiles\.net
+1506687310	Glorfindel	3dprintersbay\.com
+1506687425	Glorfindel	hdbelgesel\.tv
+1506711943	Glorfindel	starsportslive3\.blogspot\.com
+1506730306	bwDraco	icloud\W?assistant\W?pro
+1506744459	quartata	gihosoft\.com
+1506745818	NobodyNada	x?t\Wgenix
+1506758999	Glorfindel	megaqq\.com
+1506772199	Byte Commander	christinasanabella
+1506794008	Glorfindel	zhanhestudio\.com
+1506795168	Glorfindel	playgamesstore\.com
+1506861464	Glorfindel	staffordglobal\.org
+1506864747	Glorfindel	www\.ju\.edu\.jo
+1506892558	Owen Hines	el-watnya\.com
+1506920331	tripleee	elfex-linker\.com
+1506922170	tripleee	mapackers\.com
+1506923474	paper1111	mathposters\.net
+1506924670	tripleee	1?469\W*844\W*0536
+1506935371	Glorfindel	pbctimes\.com
+1506944134	Mithrandir	gamestore\.live
+1506945240	Mithrandir	hack(er)?.*(text|call|contact)
+1506959194	Owen Hines	boldcraze\.com
+1506961455	Glorfindel	bandbniagara.com
+1506963780	Owen Hines	mr-android12\.blogspot\.com\.eg
+1506971135	Glorfindel	unlimitedloottricks\.com
+1507005373	tripleee	protazen
+1507006018	tripleee	no\W?force\W?xl
+1507006266	tripleee	victorvijay\.com
+1507013586	Glorfindel	sportsinteriors\.com
+1507014788	tripleee	virplexin
+1507028647	tripleee	uneeq
