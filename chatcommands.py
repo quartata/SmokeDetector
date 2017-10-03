@@ -11,7 +11,6 @@ from blacklists import load_blacklists
 from metasmoke import Metasmoke
 from parsing import *
 from spamhandling import handle_spam
-from spamhandling import handle_user_with_all_spam
 from gitmanager import GitManager
 import threading
 from threading import Thread
@@ -1517,6 +1516,7 @@ def command_allspam(message_parts, message_url, ev_room, ev_user_id, wrap2,
                     why=why)
         # TODO: Add non-blocking delay
     return Response(command_status=True, message=None)
+
 
 #
 #
