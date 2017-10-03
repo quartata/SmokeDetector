@@ -5,7 +5,7 @@ from findspam import FindSpam
 # noinspection PyUnresolvedReferences
 from datetime import datetime
 from utcdate import UtcDate
-from apigetpost import api_get_post
+from apigetpost import api_get_post, PostData
 from datahandling import *
 from blacklists import load_blacklists
 from metasmoke import Metasmoke
@@ -19,6 +19,7 @@ import random
 import requests
 import os
 import time
+from html import unescape
 # noinspection PyCompatibility
 import regex
 from helpers import Response, only_blacklists_changed
@@ -675,7 +676,8 @@ def command_alive(ev_room, *args, **kwargs):
 
 # noinspection PyIncorrectDocstring,PyUnusedLocal
 @check_permissions
-def command_allspam(message_parts, ev_room, ev_user_id, wrap2, ev_user_name, ev_room_name, *args, **kwargs):
+def command_allspam(message_parts, message_url, ev_room, ev_user_id, wrap2,
+                    ev_user_name, ev_room_name, *args, **kwargs):
     """
     Reports all of a user's posts as spam
     :param ev_room_name:
@@ -687,8 +689,11 @@ def command_allspam(message_parts, ev_room, ev_user_id, wrap2, ev_user_name, ev_
     :param kwargs: No additional arguments expected
     :return:
     """
+    # TODO: Write tests (parsing, what else?)
     # TODO: Remove all allspam handling code
-    # TODO: Esure properly handling API requests
+    # TODO: Ensure properly handling API requests
+    # TODO: Multiple reporter check? Do we even need this anymore?
+    # TODO: Move allspam command down to report command
     if len(message_parts) != 2:
         return Response(command_status=False, message="1 argument expected")
     url = message_parts[1]
@@ -746,15 +751,41 @@ def command_allspam(message_parts, ev_room, ev_user_id, wrap2, ev_user_name, ev_
             return Response(command_status=False, message="The specified user's reputation is abnormally high. "
                                                           "Please consider flagging for moderator attention, otherwise"
                                                           "use !!/report on the posts individually.")
-        user_posts += posts
+        # Add blacklisted user - use most downvoted post as post URL
+        add_blacklisted_user(user, message_url, sorted(posts, key=lambda x: x['score'])[0]['owner']['link'])
+        # TODO: Postdata refactor, figure out a better way to use apigetpost
+        for post in posts:
+            post_data = PostData()
+            post_data.post_id = post['post_id']
+            post_data.post_url = url_to_shortlink(post['link'])
+            *discard, post_data.site, post_data.post_type = fetch_post_id_and_site_from_url(url_to_shortlink(post['link']))
+            post_data.title = unescape(post['title'])
+            post_data.owner_name = unescape(post['owner']['display_name'])
+            post_data.owner_url = post['owner']['link']
+            post_data.owner_rep = post['owner']['reputation']
+            post_data.body = post['body']
+            post_data.score = post['score']
+            post_data.up_vote_count = post['up_vote_count']
+            post_data.down_vote_count = post['down_vote_count']
+            if post_data.post_type == "answer":
+                post_data.question_id = post['question_id']
+                post_data.is_answer = True
+            user_posts.append(post_data)
     # TODO: Proper checking for sites, posts, rep
     if len(user_posts) > 15:
         return Response(command_status=False, message="The specified user has an abnormally high number of spam "
                                                       "posts. Please consider flagging for moderator attention, "
                                                       "otherwise use !!/report on the posts individually.")
-    # TODO: Run through handle spam
     why = u"User manually reported by *{}* in room *{}*.\n".format(ev_user_name, ev_room_name.decode('utf-8'))
-    handle_user_with_all_spam(user, why)
+    # Handle all posts
+    for index, post in enumerate(user_posts, start=1):
+        batch = ""
+        if len(user_posts) > 1:
+            batch = " (batch report: post {} out of {})".format(index, len(user_posts))
+        handle_spam(post=Post(api_response=post.as_dict),
+                    reasons=["Manually reported " + post.post_type + batch],
+                    why=why)
+        # TODO: Add non-blocking delay
     return Response(command_status=True, message=None)
 
 
@@ -1004,6 +1035,7 @@ def command_standby(message_parts, ev_room, ev_user_id, wrap2, *args, **kwargs):
     return Response(command_status=True, message=None)
 
 
+# --- Testing commands --- #
 # noinspection PyIncorrectDocstring,PyUnusedLocal,PyMissingTypeHints
 def command_test(content, content_lower, *args, **kwargs):
     """
@@ -1144,6 +1176,7 @@ def command_test_username(content, content_lower, *args, **kwargs):
     return Response(command_status=True, message=result)
 
 
+# --- Debugging Commands --- #
 # noinspection PyIncorrectDocstring,PyUnusedLocal
 def command_thread_descriptions(*args, **kwargs):
     """
@@ -1444,15 +1477,13 @@ def command_report_post(ev_room, ev_user_id, wrap2, message_parts, message_url,
     if len(message_parts) < 2:
         return Response(command_status=False, message="Not enough arguments.")
     output = []
-    index = 0
     urls = list(set(message_parts[1:]))
     if len(urls) > 5:
         return Response(command_status=False, message="To avoid SmokeDetector reporting posts too slowly, you can "
                                                       "report at most 5 posts at a time. This is to avoid "
                                                       "SmokeDetector's chat messages getting rate-limited too much, "
                                                       "which would slow down reports.")
-    for url in urls:
-        index += 1
+    for index, url in enumerate(urls, start=1):
         post_data = api_get_post(url)
         if post_data is None:
             output.append("Post {}: That does not look like a valid post URL.".format(index))
